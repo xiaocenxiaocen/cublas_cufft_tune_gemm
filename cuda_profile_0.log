@@ -1,0 +1,13 @@
+# CUDA_PROFILE_LOG_VERSION 2.0
+# CUDA_DEVICE 0 Tesla M2090
+# CUDA_CONTEXT 1
+# TIMESTAMPFACTOR 14ec553fbbe39157
+method,gputime,cputime,occupancy
+method=[ memset128 ] gputime=[ 114.688 ] cputime=[ 11.000 ] occupancy=[ 0.333 ] 
+method=[ memcpyHtoD ] gputime=[ 4385.344 ] cputime=[ 4551.000 ] 
+method=[ memset128 ] gputime=[ 114.880 ] cputime=[ 9.000 ] occupancy=[ 0.333 ] 
+method=[ memcpyHtoD ] gputime=[ 4383.072 ] cputime=[ 4630.000 ] 
+method=[ memset128 ] gputime=[ 114.688 ] cputime=[ 9.000 ] occupancy=[ 0.333 ] 
+method=[ memcpyHtoD ] gputime=[ 4062.080 ] cputime=[ 4239.000 ] 
+method=[ _Z15mysgemm_cache_BILm128ELm32ELm128ELm16ELm16EEvfPKfiS1_ifPfi ] gputime=[ 44485.184 ] cputime=[ 10.000 ] occupancy=[ 0.333 ] 
+method=[ memcpyDtoH ] gputime=[ 3956.544 ] cputime=[ 4254.000 ] 
