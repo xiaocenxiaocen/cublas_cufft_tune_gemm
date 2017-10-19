@@ -1,5 +1,5 @@
 # file: codegen.py
-# author: Zhang Xiao
+# author: 
 # date: 2017.10.19
 import numpy as np
 from os import system
