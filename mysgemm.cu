@@ -781,8 +781,8 @@ int main(int argc, char * argv[])
 
 	
 //	double t0 = omp_get_wtime();
-	TimerCPU timer(2.60 * 1000);
-	cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1.0f, h_A, K, h_B, N, 0.0f, h_D, N);
+	TimerCPU timer(3.07 * 1000);
+//	cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1.0f, h_A, K, h_B, N, 0.0f, h_D, N);
 	double cpuTime = timer.read();
 //	t0 = omp_get_wtime() - t0;
 //	cout << t0 << "\n";

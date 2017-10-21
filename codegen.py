@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
 	for M_factor in range(4, 5):
 		for K_factor in range(1, 2):
-			for N_factor in range(4, 20):
+			for N_factor in range(4, 9):
 					
 				BM = TY * M_factor
 				BK = TY * K_factor

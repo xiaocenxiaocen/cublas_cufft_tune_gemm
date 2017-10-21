@@ -471,7 +471,7 @@ __global__ void mysgemm_cache_B(const float alpha, const float * __restrict__ dA
 	__shared__ float B_smem[BK][BN];
 //	__shared__ float C_smem[BM][BN];
 	float C_reg[BM / TY * BN / TX];
-//	float A_reg[BK];
+	float A_reg[BK];
 
 	const int gy = blockIdx.y * BM;
 	const int gx = blockIdx.x * BN;
@@ -509,14 +509,14 @@ __global__ void mysgemm_cache_B(const float alpha, const float * __restrict__ dA
 		const float * daptr_ = daptr + tidy * lda;
 		int ii = 0;
 		for(int im = tidy; im < BM; im += TY, daptr_ += TY * lda) {
-		//	for(int kk = 0; kk < BK; kk++) {
-		//		A_reg[kk] = daptr_[kk];
-		//	}
+			for(int kk = 0; kk < BK; kk++) {
+				A_reg[kk] = daptr_[kk];
+			}
 			for(int in = tidx; in < BN; in += TX) {
 				float ret = 0.f;
 				#pragma unroll
 				for(int kk = 0; kk < BK; kk++) {
-					ret += daptr_[kk] * B_smem[kk][in];
+					ret += A_reg[kk] * B_smem[kk][in];
 //					dcptr_[in] += daptr_[kk] * B_smem[kk][in];
 //					C_smem[im][in] += A_reg[kk] * B_smem[kk][in];
 				}
