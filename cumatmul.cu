@@ -1,10 +1,21 @@
 #include <stdio.h>
-#include <mkl.h>
 #include <math.h>
 #include <omp.h>
 #include <assert.h>
 #include <iostream>
 using std::cout;
+
+#define GNU_C_COMPILER
+#if defined(GNU_C_COMPILER)
+extern "C" {
+#include "cblas.h"
+#include "lapacke.h"
+#include "lapacke_mangling.h"
+}
+#elif defined(INTEL_C_COMPILER)
+#include "mkl.h"
+#endif
+
 
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
@@ -21,7 +32,7 @@ T * host_flatten_malloc_aligned(const long int n1, const int Aligned)
 {
 	long int nbts = sizeof(T) * n1;
 	if(n1 < 0) {
-		fprintf(stderr, "ERROR: cannot allocate %lld bytes, file: %s, line: %d\n", nbts, __FILE__, __LINE__);
+		fprintf(stderr, "ERROR: cannot allocate %ld bytes, file: %s, line: %d\n", nbts, __FILE__, __LINE__);
 		return nullptr;
 	}
 //	T * ptr __attribute__((aligned(Aligned))) = (T*)_mm_malloc(nbts, Aligned);
@@ -75,21 +86,21 @@ int main(int argc, char * argv[])
 	float * h_a;
 	cudaStat = cudaMallocHost((void**)&h_a, nbts_a);
 	if(cudaStat != cudaSuccess) {
-		fprintf(stderr, "ERROR: cannot allocate %lld bytes from pinned host memory, file: %s, line: %d\n", nbts_a, __FILE__, __LINE__);
+		fprintf(stderr, "ERROR: cannot allocate %ld bytes from pinned host memory, file: %s, line: %d\n", nbts_a, __FILE__, __LINE__);
 		exit(EXIT_FAILURE);
 	}
 	
 	float * h_b;
 	cudaStat = cudaMallocHost((void**)&h_b, nbts_b);
 	if(cudaStat != cudaSuccess) {
-		fprintf(stderr, "ERROR: cannot allocate %lld bytes from pinned host memory, file: %s, line: %d\n", nbts_b, __FILE__, __LINE__);
+		fprintf(stderr, "ERROR: cannot allocate %ld bytes from pinned host memory, file: %s, line: %d\n", nbts_b, __FILE__, __LINE__);
 		exit(EXIT_FAILURE);
 	}
 	
 	float * h_c;
 	cudaStat = cudaMallocHost((void**)&h_c, nbts_c);
 	if(cudaStat != cudaSuccess) {
-		fprintf(stderr, "ERROR: cannot allocate %lld bytes from pinned host memory, file: %s, line: %d\n", nbts_c, __FILE__, __LINE__);
+		fprintf(stderr, "ERROR: cannot allocate %ld bytes from pinned host memory, file: %s, line: %d\n", nbts_c, __FILE__, __LINE__);
 		exit(EXIT_FAILURE);
 	}
 #else
@@ -160,19 +171,19 @@ int main(int argc, char * argv[])
 #else 
 	cudaStat = cudaMalloc((void**)&d_a, nbts_a);
 	if(cudaStat != cudaSuccess) {
-		fprintf(stderr, "ERROR: cannot allocate %lld bytes using routine cudaMalloc(...), file: %s, line: %d\n", nbts_a, __FILE__, __LINE__);
+		fprintf(stderr, "ERROR: cannot allocate %ld bytes using routine cudaMalloc(...), file: %s, line: %d\n", nbts_a, __FILE__, __LINE__);
 		exit(EXIT_FAILURE);
 	}
 
 	cudaStat = cudaMalloc((void**)&d_b, nbts_b);
 	if(cudaStat != cudaSuccess) {
-		fprintf(stderr, "ERROR: cannot allocate %lld bytes using routine cudaMalloc(...), file: %s, line: %d\n", nbts_b, __FILE__, __LINE__);
+		fprintf(stderr, "ERROR: cannot allocate %ld bytes using routine cudaMalloc(...), file: %s, line: %d\n", nbts_b, __FILE__, __LINE__);
 		exit(EXIT_FAILURE);
 	}
 
 	cudaStat = cudaMalloc((void**)&d_c, nbts_c);
 	if(cudaStat != cudaSuccess) {
-		fprintf(stderr, "ERROR: cannot allocate %lld bytes using routine cudaMalloc(...), file: %s, line: %d\n", nbts_c, __FILE__, __LINE__);
+		fprintf(stderr, "ERROR: cannot allocate %ld bytes using routine cudaMalloc(...), file: %s, line: %d\n", nbts_c, __FILE__, __LINE__);
 		exit(EXIT_FAILURE);
 	}
 #endif

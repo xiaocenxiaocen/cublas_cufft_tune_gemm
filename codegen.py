@@ -19,16 +19,16 @@ if __name__ == "__main__":
 	opt_time = 1e10
 
 	result = open('config.csv', 'w')
-	print >> result, "TX, TY, BM, BK, BN, time(ms)"
+	result.write("TX, TY, BM, BK, BN, time(ms)\n")
 	result.flush()	
 
 	M = int(argv[1])
 	K = int(argv[2])
 	N = int(argv[3])
 
-	for M_factor in xrange(2, 15):
-		for K_factor in xrange(2, 15):
-			for N_factor in xrange(2, 15):
+	for M_factor in range(4, 5):
+		for K_factor in range(1, 2):
+			for N_factor in range(4, 20):
 					
 				BM = TY * M_factor
 				BK = TY * K_factor
@@ -42,20 +42,22 @@ if __name__ == "__main__":
 					s/THREAD_BLOCK_Y/%d/;
 					s/ROW_BLOCK_A/%d/;
 					s/ROW_BLOCK_B/%d/;
-					s/COL_BLOCK_C/%d/" mygemm_template.cu > mygemm.cu'''%(TX, TY, BM, BK, BN)
+					s/COL_BLOCK_C/%d/" mygemm_template.cu > mysgemm.cu'''%(TX, TY, BM, BK, BN)
 			
-				print cmd
+				print(cmd)
 				call(cmd, shell = True)
 				Popen("make", shell = True, stdout = PIPE, stderr = PIPE).wait()
 				
 				ret = Popen("./mysgemm %d %d %d"%(M, K, N), shell = True, stdout = PIPE, bufsize = 1).stdout.readlines()
 				timeinfo = ret[0]
 				validinfo = ret[1]
+				timeinfo = str(timeinfo)
+				validinfo = str(validinfo)	
 				time = float(timeinfo[timeinfo.find("=") + 2:timeinfo.find("ms") - 1])
-				valid = validinfo[validinfo.find("=") + 2:-1]
-				print valid
+				valid = validinfo[validinfo.find("=") + 2:validinfo.find("\n") - 2]
+				print(valid)
 				if valid == "PASS":
-					print >> result, "%d,%d,%d,%d,%d,%.2f"%(TX, TY, BM, BK, BN, time)
+					result.write("%d,%d,%d,%d,%d,%.2f\n"%(TX, TY, BM, BK, BN, time))
 					result.flush()
 					if time < opt_time:
 						opt_TX = TX
@@ -63,6 +65,16 @@ if __name__ == "__main__":
 						opt_BM = BM
 						opt_BK = BK
 						opt_BN = BN
+						opt_time = time
 		
 	 
+	cmd = '''sed "s/THREAD_BLOCK_X/%d/g;
+		s/THREAD_BLOCK_Y/%d/;
+		s/ROW_BLOCK_A/%d/;
+		s/ROW_BLOCK_B/%d/;
+		s/COL_BLOCK_C/%d/;
+		s://#define VERBOSITY:#define VERBOSITY:g" mygemm_template.cu > mysgemm.cu'''%(opt_TX, opt_TY, opt_BM, opt_BK, opt_BN)
 	
+	call(cmd, shell = True)
+	Popen("make", shell = True, stdout = PIPE, stderr = PIPE).wait()
+
