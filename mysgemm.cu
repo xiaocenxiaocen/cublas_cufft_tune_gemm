@@ -592,7 +592,6 @@ __global__ void mysgemm_cache_B_double_buffering(const float alpha, const float 
 			}
 		}
 		__syncthreads();
-
 		daptr += BK, dbptr += stride_b;
 	
 		if(ik < lda - 1) {
@@ -624,6 +623,231 @@ __global__ void mysgemm_cache_B_double_buffering(const float alpha, const float 
 	}
 }
 
+// unrolling
+#define Bm 64
+#define Bk 32
+#define Bn 128
+#define Tx 32
+#define Ty 8
+__device__ __inline__ float s_dot16(const float * a, float * bs)
+{
+	float ret = 0.f;
+	
+	ret += a[ 0] * bs[0 * 128];
+	ret += a[ 1] * bs[1 * 128];
+	ret += a[ 2] * bs[2 * 128];
+	ret += a[ 3] * bs[3 * 128];
+	ret += a[ 4] * bs[4 * 128];
+	ret += a[ 5] * bs[5 * 128];
+	ret += a[ 6] * bs[6 * 128];
+	ret += a[ 7] * bs[7 * 128];
+	ret += a[ 8] * bs[8 * 128];
+	ret += a[ 9] * bs[9 * 128];
+	ret += a[10] * bs[10 * 128];
+	ret += a[11] * bs[11 * 128];
+	ret += a[12] * bs[12 * 128];
+	ret += a[13] * bs[13 * 128];
+	ret += a[14] * bs[14 * 128];
+	ret += a[15] * bs[15 * 128];
+
+	return ret;	
+}
+__device__ __inline__ void s_dot8(float * c, float a, float * bs)
+{
+	
+	c[0] += a * bs[0 * 16];
+	c[1] += a * bs[1 * 16];
+	c[2] += a * bs[2 * 16];
+	c[3] += a * bs[3 * 16];
+	c[4] += a * bs[4 * 16];
+	c[5] += a * bs[5 * 16];
+	c[6] += a * bs[6 * 16];
+	c[7] += a * bs[7 * 16];
+
+}
+__device__ __inline__ void s_dot4(float * c, float a, float * bs)
+{
+	
+	c[0] += a * bs[0 * 32];
+	c[1] += a * bs[1 * 32];
+	c[2] += a * bs[2 * 32];
+	c[3] += a * bs[3 * 32];
+}
+__global__ void mysgemm_cache_B_unrolling(const float alpha, const float * __restrict__ dA, const int lda, const float * __restrict__ dB, const int ldb, const float beta, float * __restrict__ dC, const int ldc)
+{
+	__shared__ float B_smem[4096];
+	float C_reg[32] = {0.f};
+//	float A_reg[16] = {0.f};	
+	__shared__ float A_smem[32];
+	
+	const float * daptr = dA + ((blockIdx.y<<6) + threadIdx.y) * lda;
+	const float * dbptr = dB + (blockIdx.x<<7) + threadIdx.y * ldb + threadIdx.x;
+	float * dcptr = dC + ((blockIdx.y<<6) + threadIdx.y) * ldc + (blockIdx.x<<7) + threadIdx.x;
+
+	for(int ik = 0; ik < lda; ik += 32) {
+		float * Bs = &B_smem[(threadIdx.y<<7) + threadIdx.x];
+		Bs[0 * 128 + 0 * 32] = dbptr[0 * (ldb<<3) + 0 * 32];
+		Bs[0 * 128 + 1 * 32] = dbptr[0 * (ldb<<3) + 1 * 32];
+		Bs[0 * 128 + 2 * 32] = dbptr[0 * (ldb<<3) + 2 * 32];
+		Bs[0 * 128 + 3 * 32] = dbptr[0 * (ldb<<3) + 3 * 32];
+		Bs[1 * 128 + 0 * 32] = dbptr[1 * (ldb<<3) + 0 * 32];
+		Bs[1 * 128 + 1 * 32] = dbptr[1 * (ldb<<3) + 1 * 32];
+		Bs[1 * 128 + 2 * 32] = dbptr[1 * (ldb<<3) + 2 * 32];
+		Bs[1 * 128 + 3 * 32] = dbptr[1 * (ldb<<3) + 3 * 32];
+		Bs[2 * 128 + 0 * 32] = dbptr[2 * (ldb<<3) + 0 * 32];
+		Bs[2 * 128 + 1 * 32] = dbptr[2 * (ldb<<3) + 1 * 32];
+		Bs[2 * 128 + 2 * 32] = dbptr[2 * (ldb<<3) + 2 * 32];
+		Bs[2 * 128 + 3 * 32] = dbptr[2 * (ldb<<3) + 3 * 32];
+		Bs[3 * 128 + 0 * 32] = dbptr[3 * (ldb<<3) + 0 * 32];
+		Bs[3 * 128 + 1 * 32] = dbptr[3 * (ldb<<3) + 1 * 32];
+		Bs[3 * 128 + 2 * 32] = dbptr[3 * (ldb<<3) + 2 * 32];
+		Bs[3 * 128 + 3 * 32] = dbptr[3 * (ldb<<3) + 3 * 32];
+		__syncthreads();
+		
+		const float * daptr_ = daptr;
+		float * C_reg_ = C_reg;
+		#pragma unroll
+		for(int im = 0; im < 64; im += 8) {
+			if(threadIdx.y == 0) A_smem[threadIdx.x] = daptr_[threadIdx.x];
+			__syncthreads();
+//			A_reg[ 0] = daptr_[ 0];
+//			A_reg[ 1] = daptr_[ 1];
+//			A_reg[ 2] = daptr_[ 2];
+//			A_reg[ 3] = daptr_[ 3];
+//			A_reg[ 4] = daptr_[ 4];
+//			A_reg[ 5] = daptr_[ 5];
+//			A_reg[ 6] = daptr_[ 6];
+//			A_reg[ 7] = daptr_[ 7];
+//			A_reg[ 8] = daptr_[ 8];
+//			A_reg[ 9] = daptr_[ 9];
+//			A_reg[10] = daptr_[10];
+//			A_reg[11] = daptr_[11];
+//			A_reg[12] = daptr_[12];
+//			A_reg[13] = daptr_[13];
+//			A_reg[14] = daptr_[14];
+//			A_reg[15] = daptr_[15];
+//
+			Bs = &B_smem[threadIdx.x];
+			s_dot4(C_reg_, A_smem[0], &Bs[0 * 128]);
+			s_dot4(C_reg_, A_smem[1], &Bs[1 * 128]);
+			s_dot4(C_reg_, A_smem[2], &Bs[2 * 128]);
+			s_dot4(C_reg_, A_smem[3], &Bs[3 * 128]);
+			s_dot4(C_reg_, A_smem[4], &Bs[4 * 128]);
+			s_dot4(C_reg_, A_smem[5], &Bs[5 * 128]);
+			s_dot4(C_reg_, A_smem[6], &Bs[6 * 128]);
+			s_dot4(C_reg_, A_smem[7], &Bs[7 * 128]);
+			s_dot4(C_reg_, A_smem[8], &Bs[8 * 128]);
+			s_dot4(C_reg_, A_smem[9], &Bs[9 * 128]);
+			s_dot4(C_reg_, A_smem[10], &Bs[10 * 128]);
+			s_dot4(C_reg_, A_smem[11], &Bs[11 * 128]);
+			s_dot4(C_reg_, A_smem[12], &Bs[12 * 128]);
+			s_dot4(C_reg_, A_smem[13], &Bs[13 * 128]);
+			s_dot4(C_reg_, A_smem[14], &Bs[14 * 128]);
+			s_dot4(C_reg_, A_smem[15], &Bs[15 * 128]);
+			
+			s_dot4(C_reg_, A_smem[16], &Bs[16 * 128]);
+			s_dot4(C_reg_, A_smem[17], &Bs[17 * 128]);
+			s_dot4(C_reg_, A_smem[18], &Bs[18 * 128]);
+			s_dot4(C_reg_, A_smem[19], &Bs[19 * 128]);
+			s_dot4(C_reg_, A_smem[20], &Bs[20 * 128]);
+			s_dot4(C_reg_, A_smem[21], &Bs[21 * 128]);
+			s_dot4(C_reg_, A_smem[22], &Bs[22 * 128]);
+			s_dot4(C_reg_, A_smem[23], &Bs[23 * 128]);
+			s_dot4(C_reg_, A_smem[24], &Bs[24 * 128]);
+			s_dot4(C_reg_, A_smem[25], &Bs[25 * 128]);
+			s_dot4(C_reg_, A_smem[26], &Bs[26 * 128]);
+			s_dot4(C_reg_, A_smem[27], &Bs[27 * 128]);
+			s_dot4(C_reg_, A_smem[28], &Bs[28 * 128]);
+			s_dot4(C_reg_, A_smem[29], &Bs[29 * 128]);
+			s_dot4(C_reg_, A_smem[30], &Bs[30 * 128]);
+			s_dot4(C_reg_, A_smem[31], &Bs[31 * 128]);
+
+			C_reg_ += 4;
+			daptr_ += (lda<<3);					
+		}
+		__syncthreads();
+		
+		daptr += 32;
+		dbptr += (ldb<<5);
+	}	
+	
+	float * C_reg_ = C_reg;
+	#pragma unroll
+	for(int im = 0; im < 64; im += 8) {
+		dcptr[0 * 32] = beta * dcptr[0 * 32] + alpha * C_reg_[0];
+		dcptr[1 * 32] = beta * dcptr[1 * 32] + alpha * C_reg_[1];
+		dcptr[2 * 32] = beta * dcptr[2 * 32] + alpha * C_reg_[2];
+		dcptr[3 * 32] = beta * dcptr[3 * 32] + alpha * C_reg_[3];
+		dcptr += (ldc<<3);
+		C_reg_ += 4;
+	}	
+}
+
+__global__ void mysgemm_cache_B_unrolling__(const float alpha, const float * __restrict__ dA, const int lda, const float * __restrict__ dB, const int ldb, const float beta, float * __restrict__ dC, const int ldc)
+{
+	__shared__ float B_smem[2048];
+	float C_reg[32] = {0.f};
+	__shared__ float A_smem[16];	
+
+	const float * daptr = dA + ((blockIdx.y<<6) + threadIdx.y) * lda;
+	const float * dbptr = dB + (blockIdx.x<<7) + threadIdx.y * ldb + threadIdx.x;
+	float * dcptr = dC + ((blockIdx.y<<6) + threadIdx.y) * ldc + (blockIdx.x<<7) + threadIdx.x;
+
+
+	for(int ik = 0; ik < lda; ik += 16) {
+		const float * dbptr_ = dbptr + threadIdx.y * ldb + threadIdx.x;
+		float * Bs = &B_smem[(threadIdx.y<<7) + threadIdx.x];
+		B_smem[0 * 16] = dbptr_[0 * 16];
+		B_smem[1 * 16] = dbptr_[1 * 16];
+		B_smem[2 * 16] = dbptr_[2 * 16];
+		B_smem[3 * 16] = dbptr_[3 * 16];
+		B_smem[4 * 16] = dbptr_[4 * 16];
+		B_smem[5 * 16] = dbptr_[5 * 16];
+		B_smem[6 * 16] = dbptr_[6 * 16];
+		B_smem[7 * 16] = dbptr_[7 * 16];
+		__syncthreads();
+		
+		const float * daptr_ = daptr;
+		float * C_reg_ = C_reg;
+		#pragma unroll
+		for(int im = 0; im < 64; im += 16) {
+			if(threadIdx.y == 0) A_smem[threadIdx.x] = daptr_[threadIdx.x];	
+			__syncthreads();		
+
+			Bs = &B_smem[threadIdx.x];
+			C_reg_[0] += s_dot16(A_smem, &Bs[0 * 16]);
+			C_reg_[1] += s_dot16(A_smem, &Bs[1 * 16]);
+			C_reg_[2] += s_dot16(A_smem, &Bs[2 * 16]);
+			C_reg_[3] += s_dot16(A_smem, &Bs[3 * 16]);
+			C_reg_[4] += s_dot16(A_smem, &Bs[4 * 16]);
+			C_reg_[5] += s_dot16(A_smem, &Bs[5 * 16]);
+			C_reg_[6] += s_dot16(A_smem, &Bs[6 * 16]);
+			C_reg_[7] += s_dot16(A_smem, &Bs[7 * 16]);
+			
+			C_reg_ += 8;
+			daptr_ += (lda<<4);					
+		}
+		__syncthreads();
+
+		daptr += 16;
+		dbptr += (ldb << 4);
+	}	
+	
+	float * C_reg_ = C_reg;
+	#pragma unroll
+	for(int im = 0; im < 64; im += 16) {
+		dcptr[0 * 16] = beta * dcptr[0 * 16] + alpha * C_reg_[0];
+		dcptr[1 * 16] = beta * dcptr[1 * 16] + alpha * C_reg_[1];
+		dcptr[2 * 16] = beta * dcptr[2 * 16] + alpha * C_reg_[2];
+		dcptr[3 * 16] = beta * dcptr[3 * 16] + alpha * C_reg_[3];
+		dcptr[4 * 16] = beta * dcptr[4 * 16] + alpha * C_reg_[4];
+		dcptr[5 * 16] = beta * dcptr[5 * 16] + alpha * C_reg_[5];
+		dcptr[6 * 16] = beta * dcptr[6 * 16] + alpha * C_reg_[6];
+		dcptr[7 * 16] = beta * dcptr[7 * 16] + alpha * C_reg_[7];
+		dcptr += (ldc<<4);
+		C_reg_ += 8;
+	}	
+}
 // cache A
 template<size_t BM, size_t BK, size_t BN, size_t TX, size_t TY>
 __global__ void mysgemm_cache_A(const float alpha, const float * __restrict__ dA, const int lda, const float * __restrict__ dB, const int ldb, const float beta, float * __restrict__ dC, const int ldc)
@@ -707,7 +931,8 @@ void mygemm_wrapper(const int M, const int K, const int N, const float alpha, co
 	dim3 threads( TX, TY, 1 );
 	
 	TimerGPU timer(0);
-	mysgemm_cache_B<BM, BK, BN, TX, TY><<<grid, threads>>>(alpha, wrapperA.d_data, wrapperA.padN, wrapperB.d_data, wrapperB.padN, beta, wrapperC.d_data, wrapperC.padN);
+//	mysgemm_cache_B<BM, BK, BN, TX, TY><<<grid, threads>>>(alpha, wrapperA.d_data, wrapperA.padN, wrapperB.d_data, wrapperB.padN, beta, wrapperC.d_data, wrapperC.padN);
+	mysgemm_cache_B_unrolling__<<<grid, threads>>>(alpha, wrapperA.d_data, wrapperA.padN, wrapperB.d_data, wrapperB.padN, beta, wrapperC.d_data, wrapperC.padN);
 	double gpuTime = timer.read();
 
 //	wrapperA.readback();	
@@ -781,8 +1006,8 @@ int main(int argc, char * argv[])
 
 	
 //	double t0 = omp_get_wtime();
-	TimerCPU timer(3.07 * 1000);
-//	cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1.0f, h_A, K, h_B, N, 0.0f, h_D, N);
+	TimerCPU timer(2.60 * 1000);
+	cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 1.0f, h_A, K, h_B, N, 0.0f, h_D, N);
 	double cpuTime = timer.read();
 //	t0 = omp_get_wtime() - t0;
 //	cout << t0 << "\n";

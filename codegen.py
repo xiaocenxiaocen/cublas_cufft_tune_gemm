@@ -8,8 +8,8 @@ from subprocess import Popen, call, PIPE
 
 if __name__ == "__main__":
 
-	TX = 16
-	TY = 16
+	TX = 32
+	TY = 8
 
 	opt_TX = 0
 	opt_TY = 0
@@ -26,9 +26,9 @@ if __name__ == "__main__":
 	K = int(argv[2])
 	N = int(argv[3])
 
-	for M_factor in range(4, 5):
-		for K_factor in range(1, 2):
-			for N_factor in range(4, 9):
+	for M_factor in range(4, 17):
+		for K_factor in range(3, 4):
+			for N_factor in range(4, 5):
 					
 				BM = TY * M_factor
 				BK = TY * K_factor
