@@ -30,9 +30,9 @@ if __name__ == "__main__":
 	BX = 8
 	AY = TX * TY / AX
 	BY = TX * TY / BX
-	for M_factor in range(3, 5):
-		for K_factor in range(1, 3):
-			for N_factor in range(3, 5):
+	for M_factor in range(2, 5):
+		for K_factor in range(1, 5):
+			for N_factor in range(2, 5):
 					
 				BM = max(AX, TX) * M_factor
 				BK = max(AY, BX) * K_factor

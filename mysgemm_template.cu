@@ -262,11 +262,11 @@ __global__ void mysgemm_cache_AB_prefetching(const float alpha, const float * __
 	}
 	__syncthreads();
 
-	for(kk = 0; kk < lda; kk += BK) {
+	for(kk = 0; kk < ldb; kk += BK) {
 		daptr += BK * lda;
 		dbptr += BK;
 
-		if(kk < lda - BK) {		
+		if(kk < ldb - BK) {		
 		#pragma unroll
 		for(n = 0; n < BK / AY; n++) 
 			#pragma unroll
@@ -303,7 +303,7 @@ __global__ void mysgemm_cache_AB_prefetching(const float alpha, const float * __
 		}
 		__syncthreads();
 
-		if(kk < lda - BK) {
+		if(kk < ldb - BK) {
 		#pragma unroll
 		for(n = 0; n < BK / AY; n++) 
 			#pragma unroll

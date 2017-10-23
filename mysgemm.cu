@@ -262,11 +262,11 @@ __global__ void mysgemm_cache_AB_prefetching(const float alpha, const float * __
 	}
 	__syncthreads();
 
-	for(kk = 0; kk < lda; kk += BK) {
+	for(kk = 0; kk < ldb; kk += BK) {
 		daptr += BK * lda;
 		dbptr += BK;
 
-		if(kk < lda - BK) {		
+		if(kk < ldb - BK) {		
 		#pragma unroll
 		for(n = 0; n < BK / AY; n++) 
 			#pragma unroll
@@ -303,7 +303,7 @@ __global__ void mysgemm_cache_AB_prefetching(const float alpha, const float * __
 		}
 		__syncthreads();
 
-		if(kk < lda - BK) {
+		if(kk < ldb - BK) {
 		#pragma unroll
 		for(n = 0; n < BK / AY; n++) 
 			#pragma unroll
@@ -342,7 +342,7 @@ template<size_t BM, size_t BK, size_t BN, size_t TX, size_t TY>
 void mygemm_wrapper(const int M, const int K, const int N, const float alpha, const float * A, const int lda, const float * B, const int ldb, const float beta, float * C, const int ldc)
 {
 	CudaMatrix<BK, BM> wrapperA;
-	wrapperA.allocate(lda, M, false, nullptr, const_cast<float*>(A));
+	wrapperA.allocate(lda, K, false, nullptr, const_cast<float*>(A));
 	wrapperA.download();
 	
 	CudaMatrix<BN, BK> wrapperB;
@@ -410,7 +410,7 @@ int main(int argc, char * argv[])
 	memset(h_D, 0, sizeof(float) * size_D);
 
 	// warm up
-	mygemm_wrapper<128, 8, 96, 16, 16>(
+	mygemm_wrapper<96, 24, 128, 16, 16>(
 		M, K, N, 1.f,
 		h_A, M, h_B, K, 0.f, h_C, M);
 	
@@ -433,7 +433,7 @@ int main(int argc, char * argv[])
 		double rel_err = abs_err / abs_val / dot_length;
 	
 		if (rel_err > eps) {
-	  		fprintf(stderr, "ERROR: Matrix[%05d]=%.8f, ref=%.8f error term is > %E\n", i, h_C[i], h_D[i], eps);
+//	  		fprintf(stderr, "ERROR: Matrix[%05d]=%.8f, ref=%.8f error term is > %E\n", i, h_C[i], h_D[i], eps);
  	   		correct = false;
 		
         	}
