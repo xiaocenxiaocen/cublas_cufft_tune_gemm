@@ -342,21 +342,21 @@ template<size_t BM, size_t BK, size_t BN, size_t TX, size_t TY>
 void mygemm_wrapper(const int M, const int K, const int N, const float alpha, const float * A, const int lda, const float * B, const int ldb, const float beta, float * C, const int ldc)
 {
 	CudaMatrix<BK, BM> wrapperA;
-	wrapperA.allocate(K, lda, false, nullptr, const_cast<float*>(A));
+	wrapperA.allocate(lda, K, false, nullptr, const_cast<float*>(A));
 	wrapperA.download();
 	
 	CudaMatrix<BN, BK> wrapperB;
-	wrapperB.allocate(N, ldb, false, nullptr, const_cast<float*>(B));
+	wrapperB.allocate(ldb, N, false, nullptr, const_cast<float*>(B));
 	wrapperB.download();
 
 	CudaMatrix<BN, BM> wrapperC;
-	wrapperC.allocate(N, ldc, false, nullptr, C);
+	wrapperC.allocate(ldc, N, false, nullptr, C);
 	wrapperC.download();
 
 #ifdef VERBOSITY
 	fprintf(stdout, "INFO: matrix A, size = (%dx%d), padding size = (%dx%d)\n", M, K, wrapperA.padM, wrapperA.padN);
-	fprintf(stdout, "INFO: matrix B, size = (%dx%d), padding size = (%dx%d)\n", M, K, wrapperB.padM, wrapperB.padN);
-	fprintf(stdout, "INFO: matrix C, size = (%dx%d), padding size = (%dx%d)\n", M, K, wrapperC.padM, wrapperC.padN);
+	fprintf(stdout, "INFO: matrix B, size = (%dx%d), padding size = (%dx%d)\n", K, N, wrapperB.padM, wrapperB.padN);
+	fprintf(stdout, "INFO: matrix C, size = (%dx%d), padding size = (%dx%d)\n", M, N, wrapperC.padM, wrapperC.padN);
 #endif
 
 	dim3 grid( wrapperA.padM / BM, wrapperC.padN / BN, 1 );
