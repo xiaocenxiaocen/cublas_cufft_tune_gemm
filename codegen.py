@@ -8,8 +8,8 @@ from subprocess import Popen, call, PIPE
 
 if __name__ == "__main__":
 
-	TX = 32
-	TY = 8
+	TX = 16
+	TY = 16
 
 	opt_TX = 0
 	opt_TY = 0
@@ -26,23 +26,29 @@ if __name__ == "__main__":
 	K = int(argv[2])
 	N = int(argv[3])
 
-	for M_factor in range(4, 17):
-		for K_factor in range(3, 4):
-			for N_factor in range(4, 5):
+	AX = 32
+	BX = 8
+	AY = TX * TY / AX
+	BY = TX * TY / BX
+	for M_factor in range(3, 5):
+		for K_factor in range(1, 3):
+			for N_factor in range(3, 5):
 					
-				BM = TY * M_factor
-				BK = TY * K_factor
-				BN = TX * N_factor
+				BM = max(AX, TX) * M_factor
+				BK = max(AY, BX) * K_factor
+				BN = max(TY, BY) * N_factor
 				
-				smem_size = BK * BN * 4 / 1024.0
+				smem_size = (BK * BN + BM * BK) * 4 / 1024.0
 				if smem_size > 48:
 					continue
 
 				cmd = '''sed "s/THREAD_BLOCK_X/%d/g;
-					s/THREAD_BLOCK_Y/%d/;
-					s/ROW_BLOCK_A/%d/;
-					s/ROW_BLOCK_B/%d/;
-					s/COL_BLOCK_C/%d/" mygemm_template.cu > mysgemm.cu'''%(TX, TY, BM, BK, BN)
+					s/THREAD_BLOCK_Y/%d/g;
+					s/ROW_BLOCK_A/%d/g;
+					s/ROW_BLOCK_B/%d/g;
+					s/COL_BLOCK_C/%d/g;
+					s/DIM_XA/%d/g;
+					s/DIM_XB/%d/g" mysgemm_template.cu > mysgemm.cu'''%(TX, TY, BM, BK, BN, AX, BX)
 			
 				print(cmd)
 				call(cmd, shell = True)
@@ -69,11 +75,13 @@ if __name__ == "__main__":
 		
 	 
 	cmd = '''sed "s/THREAD_BLOCK_X/%d/g;
-		s/THREAD_BLOCK_Y/%d/;
-		s/ROW_BLOCK_A/%d/;
-		s/ROW_BLOCK_B/%d/;
-		s/COL_BLOCK_C/%d/;
-		s://#define VERBOSITY:#define VERBOSITY:g" mygemm_template.cu > mysgemm.cu'''%(opt_TX, opt_TY, opt_BM, opt_BK, opt_BN)
+		s/THREAD_BLOCK_Y/%d/g;
+		s/ROW_BLOCK_A/%d/g;
+		s/ROW_BLOCK_B/%d/g;
+		s/COL_BLOCK_C/%d/g;
+		s://#define VERBOSITY:#define VERBOSITY:g;
+		s/DIM_XA/%d/g;
+		s/DIM_XB/%d/g" mysgemm_template.cu > mysgemm.cu'''%(opt_TX, opt_TY, opt_BM, opt_BK, opt_BN, AX, BX)
 	
 	call(cmd, shell = True)
 	Popen("make", shell = True, stdout = PIPE, stderr = PIPE).wait()
