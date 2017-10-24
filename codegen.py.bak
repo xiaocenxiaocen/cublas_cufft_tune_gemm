@@ -14,14 +14,13 @@ def extractCompileInfo(kernelName):
 	spillIdx = 0
 	memIdx = 0
 	for idx, str_ in enumerate(makeRetStderr):
-		str_ = str(str_)
 		if str_.find("Function properties") != -1 and str_.find(kernelName) != -1:
 			spillIdx = idx + 1
 			memIdx = idx + 2
 			break
-	spillInfo = str(makeRetStderr[spillIdx])
-	memInfo = str(makeRetStderr[memIdx])
-	stack_frame = int(spillInfo[2:spillInfo.find("bytes stack frame")])
+	spillInfo = makeRetStderr[spillIdx]
+	memInfo = makeRetStderr[memIdx]
+	stack_frame = int(spillInfo[:spillInfo.find("bytes stack frame")])
 	spill_stores = spillInfo[:spillInfo.find("bytes spill stores")]
 	spill_stores = int(spill_stores[spill_stores.rfind(",") + 1:])
 	spill_loads = spillInfo[:spillInfo.find("bytes spill loads")]
@@ -39,8 +38,8 @@ def extractCompileInfo(kernelName):
 
 if __name__ == "__main__":
 
-	TX = 256
-	TY = 1
+	TX = 16
+	TY = 16
 
 	opt_TX = 0
 	opt_TY = 0
@@ -57,16 +56,16 @@ if __name__ == "__main__":
 	K = int(argv[2])
 	N = int(argv[3])
 
-	AX = 32
-	BX = 8
+	AX = 16
+	BX = 32
 	AY = TX * TY / AX
 	BY = TX * TY / BX
-	maxrregcount = 255
-	kernelName = "mysgemm_cache_AB_prefetching"
-	order = 'COL_MAJOR'
-	for M_factor in range(1, 2):
-		for K_factor in range(1, 5):
-			for N_factor in range(1, 3):
+	maxrregcount = 63
+	kernelName = "mysgemm_cache_AB_prefetching_double_buffering"
+	order = 'ROW_MAJOR'
+	for M_factor in range(5, 9):
+		for K_factor in range(2, 3):
+			for N_factor in range(2, 5):
 	
 				if order == 'ROW_MAJOR':
 					BM = max(AY, TY) * M_factor
@@ -115,7 +114,7 @@ if __name__ == "__main__":
 				timeinfo = str(timeinfo)
 				validinfo = str(validinfo)	
 				time = float(timeinfo[timeinfo.find("=") + 2:timeinfo.find("ms") - 1])
-				valid = validinfo[validinfo.find("=") + 2:validinfo.find("\n") - 2]
+				valid = validinfo[validinfo.find("=") + 2:validinfo.find("\n")]
 				print(valid)
 				if valid == "PASS":
 					result.write("%d,%d,%d,%d,%d,%.2f\n"%(TX, TY, BM, BK, BN, time))
